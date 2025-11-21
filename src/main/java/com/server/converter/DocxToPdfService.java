@@ -1,6 +1,7 @@
 package com.server.converter;
 
 import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfWriter;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
@@ -8,6 +9,10 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -71,8 +76,8 @@ public class DocxToPdfService {
             PdfWriter.getInstance(pdfDocument, pdfFile);
             pdfDocument.open();
 
-            // Set default font (Supports basic characters)
-            Font font = FontFactory.getFont(FontFactory.TIMES_ROMAN, 12, BaseColor.BLACK);
+            // Use Unicode font to correctly display Vietnamese/English characters
+            Font font = loadUnicodeFont();
 
             // STEP 3: Write each paragraph to PDF
             for (XWPFParagraph para : paragraphs) {
@@ -114,6 +119,48 @@ public class DocxToPdfService {
                 docxFile.close();
             }
         }
+    }
+
+    private Font loadUnicodeFont() {
+        List<String> fontCandidates = Arrays.asList(
+                buildWindowsFontPath("arial.ttf"),
+                buildWindowsFontPath("arialuni.ttf"),
+                buildWindowsFontPath("times.ttf"),
+                buildWindowsFontPath("tahoma.ttf"),
+                Paths.get("/usr/share/fonts", "truetype", "dejavu", "DejaVuSans.ttf").toString(),
+                Paths.get("/usr/share/fonts", "truetype", "liberation", "LiberationSerif-Regular.ttf").toString());
+
+        for (String fontPath : fontCandidates) {
+            if (fontPath == null) {
+                continue;
+            }
+            Path path = Paths.get(fontPath);
+            if (!Files.exists(path)) {
+                continue;
+            }
+            try {
+                BaseFont baseFont = BaseFont.createFont(path.toAbsolutePath().toString(), BaseFont.IDENTITY_H,
+                        BaseFont.EMBEDDED);
+                System.out.println("[Converter] Using font: " + path);
+                return new Font(baseFont, 12, Font.NORMAL, BaseColor.BLACK);
+            } catch (DocumentException | IOException e) {
+                System.err.println("[Converter] Failed loading font " + path + ": " + e.getMessage());
+            }
+        }
+
+        FontFactory.registerDirectories();
+        Font fallback = FontFactory.getFont(FontFactory.HELVETICA, BaseFont.IDENTITY_H, true, 12, Font.NORMAL,
+                BaseColor.BLACK);
+        System.out.println("[Converter] Falling back to Helvetica (Identity-H)");
+        return fallback;
+    }
+
+    private String buildWindowsFontPath(String fontFile) {
+        String windir = System.getenv("WINDIR");
+        if (windir == null) {
+            return null;
+        }
+        return Paths.get(windir, "Fonts", fontFile).toString();
     }
 
     /**
