@@ -21,7 +21,7 @@
         align-items: center;
         padding: 20px;
         position: relative;
-        overflow: hidden;
+        overflow-y: auto;
       }
 
       body::before {
@@ -444,41 +444,43 @@
         });
 
       function renderSelection(files) {
-        if (!files || files.length === 0) {
-          fileInfo.style.display = "none";
-          fileList.innerHTML = "";
-          submitBtn.disabled = true;
-          submitBtn.textContent = "🚀 Upload & Convert (0)";
-          return;
-        }
+    	  if (!files || files.length === 0) {
+    	    fileInfo.style.display = "none";
+    	    fileList.innerHTML = "";
+    	    submitBtn.disabled = true;
+    	    submitBtn.textContent = "🚀 Upload & Convert (0)";
+    	    return;
+    	  }
 
-        const items = [];
-        let hasInvalid = false;
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          if (!file.name.toLowerCase().endsWith(".docx")) {
-            alert("File " + file.name + " không đúng định dạng DOCX!");
-            fileInput.value = "";
-            fileList.innerHTML = "";
-            submitBtn.disabled = true;
-            submitBtn.textContent = "🚀 Upload & Convert (0)";
-            return;
-          }
-          items.push(`
-            <li>
-              <div class="file-name-display">
-                <span class="file-name-text" title="${file.name}">${file.name}</span>
-              </div>
-              <button type="button" class="remove-file-btn" onclick="removeFile(${i})" title="Xóa file">×</button>
-            </li>
-          `);
-        }
+    	  const items = [];
+    	  // JSP sẽ bỏ qua các đoạn có dấu \ trước $
+    	  for (let i = 0; i < files.length; i++) {
+    	    const file = files[i];
+    	    if (!file.name.toLowerCase().endsWith(".docx")) {
+    	      alert("File " + file.name + " không đúng định dạng DOCX!");
+    	      fileInput.value = "";
+    	      fileList.innerHTML = "";
+    	      submitBtn.disabled = true;
+    	      submitBtn.textContent = "🚀 Upload & Convert (0)";
+    	      return;
+    	    }
+    	    items.push(`
+    	      <li>
+    	        <div class="file-name-display">
+    	          <span class="file-name-text" title="\${file.name}">\${file.name}</span>
+    	        </div>
+    	        <button type="button" class="remove-file-btn" onclick="removeFile(\${i})" title="Xóa file">×</button>
+    	      </li>
+    	    `);
+    	  }
 
-        fileInfo.style.display = "block";
-        fileList.innerHTML = items.join("");
-        submitBtn.disabled = false;
-        submitBtn.textContent = `🚀 Upload & Convert (${files.length})`;
-      }
+    	  fileInfo.style.display = "block";
+    	  fileList.innerHTML = items.join("");
+    	  submitBtn.disabled = false;
+    	  
+    	  // Sửa: Thêm \ trước files.length để hiển thị đúng số lượng
+    	  submitBtn.textContent = `🚀 Upload & Convert (\${files.length})`;
+    	}
 
       function removeFile(index) {
         const dt = new DataTransfer();

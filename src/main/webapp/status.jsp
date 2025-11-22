@@ -21,7 +21,7 @@
         align-items: center;
         padding: 20px;
         position: relative;
-        overflow: hidden;
+        overflow-y: auto;
       }
 
       body::before {
@@ -355,6 +355,14 @@
       function updateUI(data) {
         const status = data.status;
 
+        if (data.batchId) {
+            const backBtn = document.getElementById("backBatchBtn");
+            if (backBtn) {
+                backBtn.classList.remove("hidden");
+                backBtn.href = `batch-status.jsp?batchId=\${data.batchId}`; // Sử dụng dấu \ trước $ để tránh lỗi JSP
+            }
+        }
+        
         // Update icon
         statusIcon.textContent = statusIcons[status] || "❓";
 
