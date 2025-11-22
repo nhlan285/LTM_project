@@ -86,14 +86,14 @@ public class WorkerTask implements Runnable {
                 System.err.println("[Worker-" + workerId + "] Interrupted: " + e.getMessage());
                 Thread.currentThread().interrupt(); // Restore interrupt status
                 break; // Exit the loop
-            } catch (Exception e) {
+            } catch (Throwable t) {
                 // Handle any unexpected errors
-                System.err.println("[Worker-" + workerId + "] Error processing task: " + e.getMessage());
-                e.printStackTrace();
+                System.err.println("[Worker-" + workerId + "] Error processing task: " + t.getMessage());
+                t.printStackTrace();
 
                 // If we know which task failed, mark it as FAILED in DB
                 if (task != null) {
-                    updateTaskStatus(task.getTaskId(), "FAILED", e.getMessage(), null);
+                    updateTaskStatus(task.getTaskId(), "FAILED", t.getMessage(), null);
                 }
             }
         }
