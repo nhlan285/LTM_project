@@ -4,9 +4,9 @@
 
 - Eclipse IDE for Enterprise Java and Web Developers
 - JDK 21 đã cài đặt
-- Apache Tomcat 9.0+ hoặc 10.1+
-- MySQL đang chạy (qua XAMPP hoặc standalone)
-- Maven đã tích hợp trong Eclipse (có sẵn)
+- Apache Tomcat 9.0
+- MySQL đang chạy (qua XAMPP)
+- Maven đã tích hợp trong Eclipse
 
 ---
 
@@ -16,9 +16,11 @@
 2. `File` → `Import...`
 3. Chọn `Maven` → `Existing Maven Projects`
 4. Click `Next`
-5. `Root Directory`: Browse đến `E:\.vscode\Ki_5\LTM`
+5. `Root Directory`: Browse đến thư mục mà bạn clone project về
 6. Đảm bảo `pom.xml` được check ✓
 7. Click `Finish`
+8. Chuột phải vào project vừa được import, chọn `Properties`
+9. Chọn `Project Facets`, đảm bảo Java 21 và `Dynamic Web Module` đã được tick
 
 Eclipse sẽ tự động import và build project. Chờ quá trình "Building workspace" hoàn tất.
 
@@ -50,7 +52,6 @@ Eclipse sẽ tự động import và build project. Chờ quá trình "Building 
 3. Click `Add...`
 4. Chọn phiên bản Tomcat của bạn:
    - **Tomcat 9.x**: `Apache Tomcat v9.0`
-   - **Tomcat 10.x**: `Apache Tomcat v10.1`
 5. Click `Next`
 6. `Tomcat installation directory`: Browse đến thư mục Tomcat của bạn
 7. `JRE`: Chọn `JDK-21` (vừa cấu hình ở bước 2)
@@ -70,13 +71,14 @@ Eclipse sẽ tự động import và build project. Chờ quá trình "Building 
 ## Bước 4: Import Database Schema
 
 1. Mở MySQL qua XAMPP Control Panel hoặc MySQL Workbench
-2. Mở PowerShell hoặc Command Prompt:
+2. Mở PowerShell hoặc Command Prompt, tại thư mục chứa file `database.sql`:
    ```powershell
-   cd E:\.vscode\Ki_5\LTM
    mysql -u root -p < database.sql
    ```
 3. Nhập password MySQL (mặc định XAMPP là để trống, nhấn Enter)
 4. Database `file_converter_db` sẽ được tạo
+
+(Hoặc sử dụng Apache + MySQL của XAMPP, import database từ file)
 
 ### Kiểm tra database properties
 
@@ -92,6 +94,8 @@ db.driver=com.mysql.cj.jdbc.Driver
 Nếu MySQL của bạn có password, sửa `db.password`.
 
 ---
+
+Để test, chạy file `test-db.bat`
 
 ## Bước 5: Tạo Run Configuration cho Conversion Server
 
@@ -129,7 +133,7 @@ Console của Eclipse sẽ hiển thị:
 [Server] Waiting for connections from Web Server...
 ```
 
-**⚠️ QUAN TRỌNG:** Giữ cửa sổ Console này mở. KHÔNG tắt Conversion Server khi đang dùng web app.
+**⚠️ QUAN TRỌNG:** Giữ cửa sổ chương tình chạy. KHÔNG tắt Conversion Server khi đang dùng web app.
 
 ---
 
@@ -154,12 +158,6 @@ Mở trình duyệt và truy cập:
 
 ```
 http://localhost:8080/distributed-file-converter/
-```
-
-Hoặc:
-
-```
-http://localhost:8080/distributed-file-converter/upload
 ```
 
 ---
@@ -318,14 +316,6 @@ http://localhost:8080/distributed-file-converter/upload
   - Đổi sang port khác, ví dụ: `9998`
   - **LƯU Ý:** Phải đổi port tương ứng trong `UploadServlet.java` nơi kết nối đến server
 
-### 5. Clean khi có lỗi lạ
-
-```
-Project → Clean... → Clean all projects → OK
-```
-
----
-
 ## Hỗ trợ thêm
 
 Nếu gặp lỗi không nằm trong danh sách trên, kiểm tra:
@@ -335,5 +325,3 @@ Nếu gặp lỗi không nằm trong danh sách trên, kiểm tra:
 3. Console output của cả 2 servers
 
 ---
-
-**Chúc bạn chạy project thành công! 🚀**

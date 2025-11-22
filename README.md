@@ -19,14 +19,14 @@ A **Distributed File Converter System** that converts DOCX files to PDF using ad
 ## 🏗️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        SYSTEM ARCHITECTURE                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  [User Browser]                                                 │
-│       │                                                         │
-│       │ HTTP Upload                                             │
-│       ▼                                                         │
+┌────────────────────────────────────────────────────────────────┐
+│                        SYSTEM ARCHITECTURE                     │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  [User Browser]                                                │
+│       │                                                        │
+│       │ HTTP Upload                                            │
+│       ▼                                                        │
 │  ┌─────────────────────────┐                                   │
 │  │   MODULE A (Web Server) │                                   │
 │  │   - JSP/Servlet/Tomcat  │                                   │
@@ -34,10 +34,10 @@ A **Distributed File Converter System** that converts DOCX files to PDF using ad
 │  │   - Saves to disk       │                                   │
 │  │   - Inserts to DB       │                                   │
 │  └───────────┬─────────────┘                                   │
-│              │                                                  │
-│              │ TCP Socket (Port 9999)                           │
-│              │ Protocol: "taskId|filePath"                      │
-│              ▼                                                  │
+│              │                                                 │
+│              │ TCP Socket (Port 9999)                          │
+│              │ Protocol: "taskId|filePath"                     │
+│              ▼                                                 │
 │  ┌─────────────────────────────────────────────────┐           │
 │  │   MODULE B (Conversion Server)                  │           │
 │  │   ┌──────────────────────────────────────────┐  │           │
@@ -45,37 +45,37 @@ A **Distributed File Converter System** that converts DOCX files to PDF using ad
 │  │   │  - Accepts connections                   │  │           │
 │  │   │  - Adds tasks to BlockingQueue           │  │           │
 │  │   └────────────┬─────────────────────────────┘  │           │
-│  │                │                                 │           │
-│  │                ▼                                 │           │
+│  │                │                                │           │
+│  │                ▼                                │           │
 │  │   ┌─────────────────────────┐                   │           │
 │  │   │   BlockingQueue<Task>   │                   │           │
 │  │   └──────────┬──────────────┘                   │           │
-│  │              │                                   │           │
+│  │              │                                  │           │
 │  │      ┌───────┼────────┐                         │           │
 │  │      ▼       ▼        ▼                         │           │
 │  │  ┌────────┬────────┬────────┐                   │           │
 │  │  │Worker 1│Worker 2│Worker 3│ (ThreadPool)      │           │
-│  │  │        │        │        │                   │           │
-│  │  │ Apache │  POI   │ iText  │                   │           │
-│  │  │  POI   │ +iText │ +POI   │                   │           │
+│  │  │  use   │  use   │   use  |                   │           │
+│  │  │Word to │ Word to│ Word to│                   │           │
+│  │  │convert │ convert│ convert│                   │           │
 │  │  └───┬────┴────┬───┴────┬───┘                   │           │
 │  │      │         │        │                       │           │
 │  │      └─────────┼────────┘                       │           │
-│  │                ▼                                 │           │
+│  │                ▼                                │           │
 │  │         Updates Database                        │           │
 │  └─────────────────────────────────────────────────┘           │
-│                    │                                            │
-│                    ▼                                            │
+│                    │                                           │
+│                    ▼                                           │
 │           ┌─────────────────┐                                  │
 │           │  MySQL Database │                                  │
 │           │  - tasks table  │                                  │
 │           └─────────────────┘                                  │
-│                    ▲                                            │
+│                    ▲                                           │
 │                    │ AJAX Polling (Every 2s)                   │
-│                    │                                            │
-│              [User Browser]                                     │
-│               Status Page                                       │
-└─────────────────────────────────────────────────────────────────┘
+│                    │                                           │
+│              [User Browser]                                    │
+│               Status Page                                      │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -216,6 +216,7 @@ LTM/
 │       ├── WEB-INF/
 │       │   └── web.xml                        # Web app configuration
 │       ├── index.jsp                          # Upload page
+│       ├── batch-status.jsp                   # Status monitoring for batch view
 │       ├── status.jsp                         # Status monitoring page
 │       └── error.jsp                          # Error page
 ```
@@ -400,22 +401,6 @@ WHERE status = 'FAILED';
 
 ---
 
-## 🎓 Presentation Tips for Professor
-
-### When explaining TCP Sockets:
-
-_"Thầy ơi, em dùng Socket để tách biệt Web Server và Server xử lý. Web Server chỉ nhận file rồi gửi yêu cầu qua TCP Socket (Fire and Forget). Server xử lý nghe trên port 9999 và nhận lệnh."_
-
-### When explaining Multithreading:
-
-_"Em không xử lý file ngay khi nhận Socket vì sẽ chặn (block) các kết nối khác. Em dùng Producer-Consumer Pattern: Socket Accept Thread chỉ nhận lệnh và bỏ vào BlockingQueue (Producer), còn 3 Worker Threads liên tục lấy task từ Queue ra xử lý (Consumer)."_
-
-### When explaining Thread Pool:
-
-_"Em tạo FixedThreadPool với 3 threads. Điều này đảm bảo Server không bị quá tải (overload) dù có 100 request cùng lúc, vì chỉ có tối đa 3 file được xử lý đồng thời, còn lại đợi trong Queue."_
-
----
-
 ## 📚 Technologies Used
 
 | Technology          | Purpose                           |
@@ -424,8 +409,7 @@ _"Em tạo FixedThreadPool với 3 threads. Điều này đảm bảo Server kh�
 | **JSP/Servlet**     | Web application (Module A)        |
 | **Apache Tomcat**   | Servlet container                 |
 | **MySQL**           | Database for task tracking        |
-| **Apache POI**      | Reading DOCX files                |
-| **iText**           | Writing PDF files                 |
+| **MS WORD**         | Read & Convert DOCX to PDF        |
 | **TCP Sockets**     | Inter-process communication       |
 | **ExecutorService** | Thread pool management            |
 | **BlockingQueue**   | Producer-consumer synchronization |
@@ -435,26 +419,18 @@ _"Em tạo FixedThreadPool với 3 threads. Điều này đảm bảo Server kh�
 
 ## 👨‍💻 Author
 
-**Your Name**  
-**Student ID:** Your Student ID  
+**Nguyễn Nhật Dũng Lân**  
+**Phan Thanh Trường**  
+**Lâm Trung Hiếu**  
+
 **Course:** Network Programming  
 **Project:** Distributed File Converter System
 
 ---
 
-## 📝 License
-
-This project is for educational purposes only (Final Project).
-
----
-
 ## 🙏 Acknowledgments
 
-- Professor: [Professor Name] - Network Programming Course
-- Apache POI Documentation
-- iText Documentation
+- Professor: Pham Minh Tuan - Network Programming Course
 - Java Concurrency in Practice
 
 ---
-
-**Good luck with your presentation! 🎉**
