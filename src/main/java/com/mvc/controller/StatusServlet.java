@@ -99,7 +99,8 @@ public class StatusServlet extends HttpServlet {
      * @return Map containing task information, or null if not found
      */
     private Map<String, Object> getTaskStatus(int taskId) {
-        String sql = "SELECT status, file_path_output, error_message, created_at FROM tasks WHERE id = ?";
+        String sql = "SELECT status, file_path_output, error_message, created_at, batch_id, display_name, original_filename "
+                + "FROM tasks WHERE id = ?";
 
         try (Connection conn = DBContext.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -113,9 +114,22 @@ public class StatusServlet extends HttpServlet {
                 String status = rs.getString("status");
                 String outputPath = rs.getString("file_path_output");
                 String errorMessage = rs.getString("error_message");
+                Integer batchId = rs.getInt("batch_id");
+                if (rs.wasNull()) {
+                    batchId = null;
+                }
+
+                String displayName = rs.getString("display_name");
+                if (displayName == null || displayName.isEmpty()) {
+                    displayName = rs.getString("original_filename");
+                }
 
                 result.put("status", status);
                 result.put("taskId", taskId);
+                result.put("displayName", displayName);
+                if (batchId != null) {
+                    result.put("batchId", batchId);
+                }
 
                 // Build user-friendly message
                 String message;
@@ -130,8 +144,8 @@ public class StatusServlet extends HttpServlet {
                         message = "Conversion completed successfully!";
                         // Extract filename from full path
                         if (outputPath != null) {
-                            String fileName = outputPath.substring(outputPath.lastIndexOf(java.io.File.separator) + 1);
-                            result.put("downloadUrl", "uploads/" + fileName);
+                            result.put("downloadUrl", "download?taskId=" + taskId);
+                            result.put("previewUrl", "download?mode=inline&taskId=" + taskId);
                         }
                         break;
                     case "FAILED":

@@ -14,21 +14,62 @@
 
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
         padding: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: absolute;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 1px,
+          transparent 1px
+        );
+        background-size: 50px 50px;
+        animation: drift 20s linear infinite;
+        pointer-events: none;
+      }
+
+      @keyframes drift {
+        from {
+          transform: translate(0, 0);
+        }
+        to {
+          transform: translate(-50px, -50px);
+        }
       }
 
       .container {
-        background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        padding: 40px;
-        max-width: 600px;
+        background: rgba(255, 255, 255, 0.98);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.3);
+        padding: 45px;
+        max-width: 650px;
         width: 100%;
+        position: relative;
+        backdrop-filter: blur(10px);
+        animation: slideUp 0.5s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       h1 {
@@ -39,11 +80,13 @@
       }
 
       .status-card {
-        background: #f8f9ff;
-        border-radius: 10px;
-        padding: 30px;
+        background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+        border-radius: 16px;
+        padding: 35px;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(6, 182, 212, 0.15);
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.12);
       }
 
       .status-icon {
@@ -94,31 +137,62 @@
       }
 
       .btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         color: white;
         border: none;
-        padding: 15px 30px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
+        padding: 14px 28px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
-        transition: transform 0.2s;
-        margin: 5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 6px;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.5s, height 0.5s;
+      }
+
+      .btn:hover::before {
+        width: 200px;
+        height: 200px;
       }
 
       .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.5);
       }
 
       .btn-success {
-        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      }
+
+      .btn-success:hover {
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.5);
       }
 
       .btn-secondary {
-        background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+      }
+
+      .btn-secondary:hover {
+        box-shadow: 0 8px 20px rgba(100, 116, 139, 0.5);
       }
 
       .hidden {
@@ -159,6 +233,9 @@
   <body>
     <div class="container">
       <h1>📊 Conversion Status</h1>
+      <p style="text-align: center; margin-bottom: 20px">
+        File: <strong id="fileNameLabel">Đang tải...</strong>
+      </p>
 
       <div class="status-card">
         <div class="status-icon" id="statusIcon">⏳</div>
@@ -183,9 +260,13 @@
 
       <div style="text-align: center">
         <a href="index.jsp" class="btn btn-secondary">⬅️ Upload Another</a>
+        <a href="#" class="btn btn-secondary hidden" id="backBatchBtn"
+          >⬅️ Quay lại danh sách</a
+        >
         <a href="#" class="btn btn-success hidden" id="downloadBtn"
           >📥 Download PDF</a
         >
+        <a href="#" class="btn hidden" id="previewBtn">👀 Xem thử</a>
       </div>
 
       <div class="details">
@@ -195,7 +276,7 @@
         The conversion is processed by a separate server using:<br />
         • TCP Socket Communication<br />
         • Producer-Consumer Pattern<br />
-        • ThreadPool (3 worker threads)
+        • ThreadPool (1 worker thread - xử lý tuần tự)
       </div>
     </div>
 
@@ -203,6 +284,7 @@
       // Get task ID from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const taskId = urlParams.get("taskId");
+      const batchId = urlParams.get("batchId");
 
       // UI Elements
       const statusIcon = document.getElementById("statusIcon");
@@ -210,8 +292,11 @@
       const statusMessage = document.getElementById("statusMessage");
       const loader = document.getElementById("loader");
       const downloadBtn = document.getElementById("downloadBtn");
+      const previewBtn = document.getElementById("previewBtn");
       const progressBar = document.getElementById("progressBar");
       const progressFill = document.getElementById("progressFill");
+      const backBatchBtn = document.getElementById("backBatchBtn");
+      const fileNameLabel = document.getElementById("fileNameLabel");
 
       // Status icons mapping
       const statusIcons = {
@@ -220,6 +305,11 @@
         COMPLETED: "✅",
         FAILED: "❌",
       };
+
+      if (batchId) {
+        backBatchBtn.classList.remove("hidden");
+        backBatchBtn.href = `batch-status.jsp?batchId=${batchId}`;
+      }
 
       // Check if taskId exists
       if (!taskId) {
@@ -275,6 +365,8 @@
         statusMessage.textContent = data.message;
 
         // Update progress bar
+        downloadBtn.classList.add("hidden");
+        previewBtn.classList.add("hidden");
         progressBar.style.display = "block";
         let progress = 0;
 
@@ -294,12 +386,21 @@
               downloadBtn.href = data.downloadUrl;
               downloadBtn.classList.remove("hidden");
             }
+            if (data.previewUrl) {
+              previewBtn.href = data.previewUrl;
+              previewBtn.target = "_blank";
+              previewBtn.classList.remove("hidden");
+            }
             break;
           case "FAILED":
             progress = 100;
             progressFill.style.background = "#f44336";
             loader.style.display = "none";
             break;
+        }
+
+        if (data.displayName) {
+          fileNameLabel.textContent = data.displayName;
         }
 
         progressFill.style.width = progress + "%";

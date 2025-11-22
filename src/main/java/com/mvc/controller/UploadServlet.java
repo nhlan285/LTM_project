@@ -16,6 +16,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * =====================================================
@@ -83,68 +87,59 @@ public class UploadServlet extends HttpServlet {
         System.out.println("[UploadServlet] Received file upload request");
 
         try {
-            // ==========================================
-            // STEP 1: Get uploaded file from request
-            // ==========================================
-            Part filePart = request.getPart("file");
+            List<IncomingFile> incomingFiles = collectFiles(request);
 
-            if (filePart == null) {
-                request.setAttribute("error", "No file uploaded!");
+            if (incomingFiles.isEmpty()) {
+                request.setAttribute("error", "Không có file nào được chọn!");
                 request.getRequestDispatcher("index.jsp").forward(request, response);
                 return;
             }
 
-            String fileName = extractFileName(filePart);
-
-            // Validate file extension
-            if (!fileName.toLowerCase().endsWith(".docx")) {
-                request.setAttribute("error", "Only .docx files are allowed!");
-                request.getRequestDispatcher("index.jsp").forward(request, response);
-                return;
-            }
-
-            System.out.println("[UploadServlet] File name: " + fileName);
-
-            // ==========================================
-            // STEP 2: Save file to disk
-            // ==========================================
             String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;
-            String filePath = uploadPath + File.separator + fileName;
+            int batchId = createBatchRecord(incomingFiles.size());
 
-            // Save the file
-            filePart.write(filePath);
-            System.out.println("[UploadServlet] File saved to: " + filePath);
-
-            // ==========================================
-            // STEP 3: Insert record to database
-            // ==========================================
-            int taskId = insertTaskToDatabase(fileName, filePath);
-
-            if (taskId == -1) {
-                request.setAttribute("error", "Database error! Please try again.");
+            if (batchId == -1) {
+                request.setAttribute("error", "Không thể tạo batch mới trong cơ sở dữ liệu!");
                 request.getRequestDispatcher("index.jsp").forward(request, response);
                 return;
             }
 
-            System.out.println("[UploadServlet] Task created in DB with ID: " + taskId);
+            List<Integer> taskIds = new ArrayList<>();
+            int sequence = 0;
 
-            // ==========================================
-            // STEP 4: Send request to Conversion Server
-            // ==========================================
-            boolean sent = sendRequestToServer(taskId, filePath);
+            for (IncomingFile file : incomingFiles) {
+                String sanitized = sanitizeFileName(file.originalFileName);
+                String storedName = generateStoredFileName(sequence, sanitized);
+                String filePath = uploadPath + File.separator + storedName;
 
-            if (!sent) {
-                request.setAttribute("error", "Conversion server is not available!");
-                request.getRequestDispatcher("index.jsp").forward(request, response);
-                return;
+                file.part.write(filePath);
+                System.out.println("[UploadServlet] File saved to: " + filePath);
+
+                int taskId = insertTaskToDatabase(batchId, sequence, file.originalFileName, filePath);
+
+                if (taskId == -1) {
+                    request.setAttribute("error", "Không thể ghi dữ liệu task vào database.");
+                    request.getRequestDispatcher("index.jsp").forward(request, response);
+                    return;
+                }
+
+                boolean sent = sendRequestToServer(taskId, filePath);
+
+                if (!sent) {
+                    request.setAttribute("error", "Conversion server đang tạm thời không phản hồi. Vui lòng thử lại.");
+                    request.getRequestDispatcher("index.jsp").forward(request, response);
+                    return;
+                }
+
+                taskIds.add(taskId);
+                sequence++;
             }
 
-            System.out.println("[UploadServlet] Request sent to Conversion Server");
-
-            // ==========================================
-            // STEP 5: Redirect to status page
-            // ==========================================
-            response.sendRedirect("status.jsp?taskId=" + taskId);
+            if (taskIds.size() == 1) {
+                response.sendRedirect("status.jsp?taskId=" + taskIds.get(0) + "&batchId=" + batchId);
+            } else {
+                response.sendRedirect("batch-status.jsp?batchId=" + batchId);
+            }
 
         } catch (Exception e) {
             System.err.println("[UploadServlet] Error: " + e.getMessage());
@@ -175,14 +170,18 @@ public class UploadServlet extends HttpServlet {
      * @param filePath Full path to saved file
      * @return The auto-generated task ID, or -1 if failed
      */
-    private int insertTaskToDatabase(String fileName, String filePath) {
-        String sql = "INSERT INTO tasks (original_filename, file_path_input, status) VALUES (?, ?, 'PENDING')";
+    private int insertTaskToDatabase(int batchId, int sequenceOrder, String displayName, String filePath) {
+        String sql = "INSERT INTO tasks (batch_id, sequence_order, display_name, original_filename, file_path_input, status) "
+                + "VALUES (?, ?, ?, ?, ?, 'PENDING')";
 
         try (Connection conn = DBContext.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setString(1, fileName);
-            stmt.setString(2, filePath);
+            stmt.setInt(1, batchId);
+            stmt.setInt(2, sequenceOrder);
+            stmt.setString(3, displayName);
+            stmt.setString(4, displayName);
+            stmt.setString(5, filePath);
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -200,6 +199,77 @@ public class UploadServlet extends HttpServlet {
         }
 
         return -1;
+    }
+
+    private int createBatchRecord(int totalFiles) {
+        String sql = "INSERT INTO upload_batches (total_files, completed_files, status) VALUES (?, 0, 'PENDING')";
+
+        try (Connection conn = DBContext.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setInt(1, totalFiles);
+
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[UploadServlet] Database error when creating batch: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return -1;
+    }
+
+    private List<IncomingFile> collectFiles(HttpServletRequest request) throws IOException, ServletException {
+        Collection<Part> parts = request.getParts();
+        List<IncomingFile> files = new ArrayList<>();
+
+        for (Part part : parts) {
+            if ((!"files".equals(part.getName()) && !"file".equals(part.getName())) || part.getSize() == 0) {
+                continue;
+            }
+
+            String fileName = extractFileName(part);
+            if (fileName == null || fileName.isEmpty()) {
+                continue;
+            }
+
+            if (!fileName.toLowerCase().endsWith(".docx")) {
+                throw new ServletException("File " + fileName + " không đúng định dạng .docx");
+            }
+
+            files.add(new IncomingFile(part, fileName));
+        }
+
+        return files;
+    }
+
+    private String sanitizeFileName(String original) {
+        String base = original == null ? "file.docx" : original;
+        base = Paths.get(base).getFileName().toString();
+        return base.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    private String generateStoredFileName(int sequence, String sanitizedName) {
+        String timestamp = String.valueOf(Instant.now().toEpochMilli());
+        return timestamp + "_" + sequence + "_" + sanitizedName;
+    }
+
+    private static class IncomingFile {
+        private final Part part;
+        private final String originalFileName;
+
+        private IncomingFile(Part part, String originalFileName) {
+            this.part = part;
+            this.originalFileName = originalFileName;
+        }
     }
 
     /**

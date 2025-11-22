@@ -64,7 +64,7 @@ public class ServerMain {
 
     // Server Configuration
     private static final int PORT = 9999;
-    private static final int WORKER_THREAD_COUNT = 3;
+    private static final int WORKER_THREAD_COUNT = 1;
 
     // Shared resources
     private static BlockingQueue<TaskRequest> taskQueue;

@@ -51,6 +51,18 @@ Kết quả: `target\file-converter.war` sẽ được tạo.
 - Khởi động Tomcat (nếu chưa chạy): `TOMCAT_HOME\bin\startup.bat` hoặc dùng Tomcat service.
 - Mở trình duyệt: `http://localhost:8080/file-converter/`
 
+```powershell
+# Ví dụ Tomcat ở D:\Code\Java\apache-tomcat-9.0.112
+Copy-Item -Force .\target\file-converter.war "D:\Code\Java\apache-tomcat-9.0.112\webapps\file-converter.war"
+
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-24"
+$env:JRE_HOME = $env:JAVA_HOME
+$env:CATALINA_HOME = "D:\Code\Java\apache-tomcat-9.0.112"
+& "$env:CATALINA_HOME\bin\startup.bat"
+
+Start-Process "http://localhost:8080/file-converter/"
+```
+
 ---
 
 ## 5) Chạy Conversion Server (Module B)
@@ -84,9 +96,20 @@ Bạn sẽ thấy console hiển thị:
 ## 6) Upload file từ web UI
 
 - Vào `http://localhost:8080/file-converter/`
-- Chọn file `.docx` và bấm `Upload & Convert`
+- Có thể chọn **nhiều** file `.docx` cùng lúc (Ctrl/Shift hoặc drag & drop)
 - Trang status sẽ redirect sang `status.jsp` với `taskId`
 - Trang dùng AJAX polling để kiểm tra `api/status?taskId=...`
+
+```powershell
+Start-Process "http://localhost:8080/file-converter/"
+```
+
+### Upload nhiều file trong một batch
+
+- Sau khi chọn nhiều file và bấm Upload, bạn sẽ được chuyển đến `batch-status.jsp?batchId=...`
+- Trang này hiển thị danh sách toàn bộ file, trạng thái từng file và nút `Download`, `Preview`, hoặc `Chi tiết`
+- Có nút `Download All` để tải toàn bộ PDF dưới dạng ZIP một lần
+- Click vào từng hàng sẽ mở trang `status.jsp` tương ứng (có nút quay lại danh sách)
 
 ---
 
@@ -130,6 +153,10 @@ taskkill /PID <PID_FROM_NETSTAT> /F
 ## 10) Stop Server
 
 Trong cửa sổ PowerShell chạy `start-server.bat`, nhấn `Ctrl+C` để dừng server.
+
+```powershell
+& "$env:CATALINA_HOME\bin\shutdown.bat"
+```
 
 ---
 
@@ -186,4 +213,12 @@ Khi cần dừng hệ thống, dùng `Ctrl+C` tại cửa sổ Conversion Server
 
 ---
 
-Nếu bạn muốn mình tạo thêm một script PowerShell (`run-all.ps1`) để tự động hóa các bước (ví dụ: build + start server), mình có thể tạo giúp. Chỉ cần xác nhận bạn muốn tự động hoá những bước nào.
+## 13) API/Endpoint mới hỗ trợ batch
+
+- `POST /upload`: giờ chấp nhận trường `files` (multiple). Tự động tạo `batchId` để gom task.
+- `GET /batch-status.jsp?batchId=...`: giao diện tổng hợp trạng thái.
+- `GET /api/batch-status?batchId=...`: REST JSON trả về danh sách task + link download.
+- `GET /download?taskId=...`: tải file PDF đã convert (thêm `mode=inline` để xem trước).
+- `GET /download-all?batchId=...`: gom tất cả file `COMPLETED` thành một ZIP.
+
+Conversion Server hiện chạy **1 worker thread** để bảo đảm xử lý lần lượt theo thứ tự upload (FIFO).

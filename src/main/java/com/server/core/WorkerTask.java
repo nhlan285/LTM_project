@@ -4,9 +4,9 @@ import com.common.DBContext;
 import com.server.converter.DocxToPdfService;
 import com.server.model.TaskRequest;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.BlockingQueue;
 
@@ -146,28 +146,139 @@ public class WorkerTask implements Runnable {
      * @param outputPath   Path to converted PDF (null if not completed)
      */
     private void updateTaskStatus(int taskId, String status, String errorMessage, String outputPath) {
-        String sql = "UPDATE tasks SET status = ?, error_message = ?, file_path_output = ? WHERE id = ?";
+        String updateTaskSql = "UPDATE tasks SET status = ?, error_message = ?, file_path_output = ? WHERE id = ?";
+        String fetchBatchSql = "SELECT batch_id FROM tasks WHERE id = ?";
 
-        // Try-with-resources: Automatically closes connection
-        try (Connection conn = DBContext.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
+        Connection conn = null;
+        try {
+            conn = DBContext.getConnection();
+            conn.setAutoCommit(false);
 
-            stmt.setString(1, status);
-            stmt.setString(2, errorMessage);
-            stmt.setString(3, outputPath);
-            stmt.setInt(4, taskId);
+            Integer batchId = null;
 
-            int rowsAffected = stmt.executeUpdate();
+            try (PreparedStatement updateStmt = conn.prepareStatement(updateTaskSql);
+                    PreparedStatement batchStmt = conn.prepareStatement(fetchBatchSql)) {
 
-            if (rowsAffected > 0) {
-                System.out.println("[Worker-" + workerId + "] DB updated: Task " + taskId + " -> " + status);
-            } else {
-                System.err.println("[Worker-" + workerId + "] Warning: Task " + taskId + " not found in DB");
+                updateStmt.setString(1, status);
+                updateStmt.setString(2, errorMessage);
+                updateStmt.setString(3, outputPath);
+                updateStmt.setInt(4, taskId);
+                int rowsAffected = updateStmt.executeUpdate();
+
+                if (rowsAffected == 0) {
+                    conn.rollback();
+                    System.err.println("[Worker-" + workerId + "] Warning: Task " + taskId + " not found in DB");
+                    return;
+                }
+
+                batchStmt.setInt(1, taskId);
+                try (ResultSet rs = batchStmt.executeQuery()) {
+                    if (rs.next()) {
+                        batchId = rs.getInt("batch_id");
+                        if (rs.wasNull()) {
+                            batchId = null;
+                        }
+                    }
+                }
             }
 
+            if (batchId != null) {
+                updateBatchSummary(conn, batchId);
+            }
+
+            conn.commit();
+            System.out.println("[Worker-" + workerId + "] DB updated: Task " + taskId + " -> " + status);
+
         } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    System.err.println("[Worker-" + workerId + "] Rollback failed: " + rollbackEx.getMessage());
+                }
+            }
             System.err.println("[Worker-" + workerId + "] DB error: " + e.getMessage());
             e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("[Worker-" + workerId + "] Error closing connection: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void updateBatchSummary(Connection conn, int batchId) throws SQLException {
+        String totalSql = "SELECT total_files FROM upload_batches WHERE id = ? FOR UPDATE";
+        String countSql = "SELECT status, COUNT(*) AS cnt FROM tasks WHERE batch_id = ? GROUP BY status";
+        String updateSql = "UPDATE upload_batches SET completed_files = ?, status = ? WHERE id = ?";
+
+        int totalFiles = 0;
+        try (PreparedStatement totalStmt = conn.prepareStatement(totalSql)) {
+            totalStmt.setInt(1, batchId);
+            try (ResultSet rs = totalStmt.executeQuery()) {
+                if (rs.next()) {
+                    totalFiles = rs.getInt("total_files");
+                }
+            }
+        }
+
+        if (totalFiles == 0) {
+            return;
+        }
+
+        int completed = 0;
+        int failed = 0;
+        int processing = 0;
+        int pending = 0;
+
+        try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+            countStmt.setInt(1, batchId);
+            try (ResultSet rs = countStmt.executeQuery()) {
+                while (rs.next()) {
+                    String status = rs.getString("status");
+                    int cnt = rs.getInt("cnt");
+                    switch (status) {
+                        case "COMPLETED":
+                            completed = cnt;
+                            break;
+                        case "FAILED":
+                            failed = cnt;
+                            break;
+                        case "PROCESSING":
+                            processing = cnt;
+                            break;
+                        case "PENDING":
+                            pending = cnt;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+        String batchStatus;
+        if (failed > 0) {
+            batchStatus = "FAILED";
+        } else if (completed >= totalFiles && totalFiles > 0) {
+            batchStatus = "COMPLETED";
+        } else if (processing > 0) {
+            batchStatus = "PROCESSING";
+        } else if (pending > 0) {
+            batchStatus = "PENDING";
+        } else {
+            batchStatus = "PENDING";
+        }
+
+        try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+            updateStmt.setInt(1, completed);
+            updateStmt.setString(2, batchStatus);
+            updateStmt.setInt(3, batchId);
+            updateStmt.executeUpdate();
         }
     }
 }
