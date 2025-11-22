@@ -15,7 +15,7 @@ isErrorPage="true" %>
 
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         min-height: 100vh;
         display: flex;
         justify-content: center;
@@ -49,7 +49,7 @@ isErrorPage="true" %>
       }
 
       .btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         color: white;
         border: none;
         padding: 15px 30px;
@@ -59,11 +59,31 @@ isErrorPage="true" %>
         cursor: pointer;
         text-decoration: none;
         display: inline-block;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
       }
 
       .btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.5);
+      }
+
+      .error-details {
+        background: #f8f9fa;
+        border-left: 4px solid #ef4444;
+        padding: 15px;
+        margin-top: 20px;
+        text-align: left;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .error-details pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 12px;
+        color: #dc2626;
+        font-family: "Courier New", monospace;
       }
     </style>
   </head>
@@ -72,6 +92,22 @@ isErrorPage="true" %>
       <div class="error-icon">❌</div>
       <h1>Oops! Something went wrong</h1>
       <p>We're sorry, but an error occurred while processing your request.</p>
+
+      <% if (exception != null) { %>
+      <div class="error-details">
+        <strong>Error Details:</strong>
+        <pre>
+<%= exception.getClass().getName() %>: <%= exception.getMessage() != null ? exception.getMessage() : "No message available" %></pre
+        >
+        <% if (exception.getCause() != null) { %>
+        <strong>Caused by:</strong>
+        <pre>
+<%= exception.getCause().getClass().getName() %>: <%= exception.getCause().getMessage() %></pre
+        >
+        <% } %>
+      </div>
+      <% } %>
+
       <a href="index.jsp" class="btn">🏠 Go Home</a>
     </div>
   </body>
