@@ -3,10 +3,10 @@
 ## Yêu cầu trước khi bắt đầu
 
 - Eclipse IDE for Enterprise Java and Web Developers
-- JDK 21 đã cài đặt
-- Apache Tomcat 9.0
-- MySQL đang chạy (qua XAMPP)
-- Maven đã tích hợp trong Eclipse
+- JDK 21 + Maven: Java Development Kit để biên dịch và chạy ứng dụng.
+- MySQL(XAMPP): Cơ sở dữ liệu lưu trữ thông tin về các tác vụ chuyển đổi.
+- Apache Tomcat 9: Máy chủ web để triển khai ứng dụng web.
+- LibreOffice : converter free, open-source, nhẹ hơn Wor
 
 ---
 
