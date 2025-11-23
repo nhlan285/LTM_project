@@ -20,20 +20,19 @@ public class DocxToPdfService {
 
         if (!outDir.exists()) outDir.mkdirs();
 
-        // 1. TẠO ĐƯỜNG DẪN PROFILE TẠM THỜI
+        // tạo profile riêng để chạy trên nhiều process
         // Windows Temp: C:\Users\User\AppData\Local\Temp\
-        // Chúng ta tạo: C:\Users\User\AppData\Local\Temp\LibreOffice_Worker_1
+        //          Tạo: C:\Users\User\AppData\Local\Temp\LibreOffice_Worker_1
         String tempDir = System.getProperty("java.io.tmpdir");
         File customUserDir = new File(tempDir, "LibreOffice_Worker_" + workerId);
         
-        // Chuẩn hóa đường dẫn cho LibreOffice (dùng dấu gạch chéo / và thêm file:///)
+        // Chuẩn hóa đường dẫn (dùng dấu gạch chéo / và thêm file:///)
         String userInstallationArg = "-env:UserInstallation=file:///" + 
                                      customUserDir.getAbsolutePath().replace("\\", "/");
 
-        // 2. CẤU HÌNH PROCESS BUILDER
         ProcessBuilder pb = new ProcessBuilder(
             LIBRE_PATH,
-            userInstallationArg, // <--- THAM SỐ QUAN TRỌNG ĐỂ CHẠY SONG SONG
+            userInstallationArg, //  SONG SONG
             "--headless",
             "--invisible",
             "--norestore",
@@ -47,10 +46,9 @@ public class DocxToPdfService {
 
         pb.redirectErrorStream(true);
 
-        // 3. THỰC THI
         Process process = pb.start();
         
-        // Đọc log từ LibreOffice (Optional - để debug nếu lỗi)
+        // debug
         // try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
         //     String line;
         //     while ((line = reader.readLine()) != null) { System.out.println(line); }

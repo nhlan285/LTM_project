@@ -18,49 +18,38 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * =====================================================
- * StatusServlet - REST API FOR AJAX POLLING
- * =====================================================
- * Purpose: Provides task status information in JSON format
+ * AJAX POLLING
+ * Mục đích: Cung cấp thông tin trạng thái của tác vụ dưới dạng JSON
  * 
- * COMMUNICATION PATTERN: Polling (Client-side)
- * - The JSP page uses AJAX to call this servlet every 2 seconds
- * - This servlet queries the database and returns JSON
- * - Client-side JavaScript updates the UI based on status
+ * MÔ HÌNH GIAO TIẾP: Polling (Client-side)
+ * - Trang JSP dùng AJAX gọi servlet này mỗi 2 giây
+ * - Servlet truy vấn cơ sở dữ liệu và trả về JSON
+ * - JavaScript phía client cập nhật giao diện dựa trên trạng thái
  * 
- * EXAMPLE RESPONSE:
+ * VÍ DỤ PHẢN HỒI:
  * {
- * "status": "COMPLETED",
- * "message": "Conversion successful!",
- * "downloadUrl": "/uploads/document.pdf"
+ *   "status": "COMPLETED",
+ *   "message": "Chuyển đổi thành công!",
+ *   "downloadUrl": "/uploads/document.pdf"
  * }
- * 
- * @author Your Name
- * @course Network Programming - Final Project
  */
+
 @WebServlet("/api/status")
 public class StatusServlet extends HttpServlet {
 
     private final Gson gson = new Gson();
 
-    /**
-     * Handle GET request - Return task status as JSON
-     * 
-     * Query Parameter: taskId
-     * Example: /api/status?taskId=123
-     */
+//      /api/status?taskId=123
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Set response type to JSON
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         PrintWriter out = response.getWriter();
 
         try {
-            // Get taskId parameter
             String taskIdParam = request.getParameter("taskId");
 
             if (taskIdParam == null || taskIdParam.isEmpty()) {
@@ -70,7 +59,6 @@ public class StatusServlet extends HttpServlet {
 
             int taskId = Integer.parseInt(taskIdParam);
 
-            // Query database for task status
             Map<String, Object> taskInfo = getTaskStatus(taskId);
 
             if (taskInfo == null) {
@@ -78,7 +66,6 @@ public class StatusServlet extends HttpServlet {
                 return;
             }
 
-            // Return task info as JSON
             out.print(gson.toJson(taskInfo));
 
         } catch (NumberFormatException e) {
@@ -92,12 +79,7 @@ public class StatusServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Query database for task status
-     * 
-     * @param taskId The task ID to query
-     * @return Map containing task information, or null if not found
-     */
+
     private Map<String, Object> getTaskStatus(int taskId) {
         String sql = "SELECT status, file_path_output, error_message, created_at, batch_id, display_name, original_filename "
                 + "FROM tasks WHERE id = ?";
@@ -131,7 +113,6 @@ public class StatusServlet extends HttpServlet {
                     result.put("batchId", batchId);
                 }
 
-                // Build user-friendly message
                 String message;
                 switch (status) {
                     case "PENDING":
@@ -169,9 +150,6 @@ public class StatusServlet extends HttpServlet {
         return null;
     }
 
-    /**
-     * Create error response
-     */
     private Map<String, Object> createErrorResponse(String errorMessage) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", false);

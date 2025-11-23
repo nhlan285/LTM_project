@@ -24,9 +24,7 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-/**
- * Tải toàn bộ file PDF của một batch dưới dạng ZIP.
- */
+// Tải toàn bộ file PDF của một batch dưới dạng ZIP.
 @WebServlet("/download-all")
 public class BatchDownloadServlet extends HttpServlet {
 

@@ -14,10 +14,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ServerMain {
 
-    // Server Configuration
     private static final int PORT = 9999;
     
-    // SỬA: Tăng lên 3 worker để chạy song song
+    // Số lượng worker
     private static final int WORKER_THREAD_COUNT = 3;
 
     // Shared resources
@@ -25,24 +24,23 @@ public class ServerMain {
     private static ExecutorService workerPool;
 
     public static void main(String[] args) {
-        System.out.println("═══════════════════════════════════════════════════");
+        System.out.println("===================================================");
         System.out.println("  FILE CONVERSION SERVER (MODULE B) - STARTING");
-        System.out.println("═══════════════════════════════════════════════════");
+        System.out.println("===================================================");
 
-        // 1. Init Queue
+        // queue
         taskQueue = new LinkedBlockingQueue<>();
         System.out.println("[Server] BlockingQueue initialized.");
 
-        // 2. Create Thread Pool
+        // pool
         workerPool = Executors.newFixedThreadPool(WORKER_THREAD_COUNT);
         System.out.println("[Server] ThreadPool created with " + WORKER_THREAD_COUNT + " workers.");
 
-        // Submit WorkerTask
+        // submit WorkerTask
         for (int i = 1; i <= WORKER_THREAD_COUNT; i++) {
             workerPool.submit(new WorkerTask(taskQueue, i));
         }
 
-        // 3. Start Server
         startServer();
     }
 

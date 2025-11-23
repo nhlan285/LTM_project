@@ -53,7 +53,7 @@ public class WorkerTask implements Runnable {
         try {
             updateTaskStatus(taskId, "PROCESSING", null, null);
 
-            // SỬA QUAN TRỌNG: Truyền workerId vào để tạo môi trường riêng
+            // Truyền workerId vào để tạo profile riêng
             converter.convertDocxToPdf(inputPath, outputPath, workerId);
 
             updateTaskStatus(taskId, "COMPLETED", null, outputPath);
@@ -65,7 +65,6 @@ public class WorkerTask implements Runnable {
         }
     }
 
-    // ... (Giữ nguyên phần updateTaskStatus và updateBatchSummary như code cũ của bạn) ...
     private void updateTaskStatus(int taskId, String status, String errorMessage, String outputPath) {
         String updateTaskSql = "UPDATE tasks SET status = ?, error_message = ?, file_path_output = ? WHERE id = ?";
         String fetchBatchSql = "SELECT batch_id FROM tasks WHERE id = ?";
@@ -108,9 +107,7 @@ public class WorkerTask implements Runnable {
         }
     }
     
-    // ... Copy method updateBatchSummary từ code cũ vào đây ...
     private void updateBatchSummary(Connection conn, int batchId) throws SQLException {
-        // (Giữ nguyên logic của bạn để tiết kiệm độ dài câu trả lời)
         String totalSql = "SELECT total_files FROM upload_batches WHERE id = ? FOR UPDATE";
         String countSql = "SELECT status, COUNT(*) AS cnt FROM tasks WHERE batch_id = ? GROUP BY status";
         String updateSql = "UPDATE upload_batches SET completed_files = ?, status = ? WHERE id = ?";

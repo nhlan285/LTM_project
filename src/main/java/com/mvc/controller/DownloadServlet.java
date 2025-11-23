@@ -18,9 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * Tải hoặc xem file PDF đã convert.
- */
+// Tải hoặc xem file PDF đã convert.
 @WebServlet("/download")
 public class DownloadServlet extends HttpServlet {
 

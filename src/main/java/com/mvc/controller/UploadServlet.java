@@ -22,28 +22,22 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * =====================================================
- * UploadServlet - WEB CONTROLLER (MODULE A)
- * =====================================================
- * Purpose: Handles file upload from user and sends conversion request to Server
+ * Mục đích: Xử lý việc người dùng upload file và gửi yêu cầu chuyển đổi đến Server
  * 
- * WORKFLOW:
- * 1. User uploads .docx file via web form
- * 2. Servlet saves file to disk (uploads folder)
- * 3. Servlet inserts record to database (status = PENDING)
- * 4. Servlet opens TCP Socket to Conversion Server (Module B)
- * 5. Servlet sends "taskId|filePath" to Server
- * 6. Servlet closes Socket immediately (Fire and Forget)
- * 7. User is redirected to status page to monitor progress
+ * QUY TRÌNH:
+ * 1. Người dùng upload file .docx thông qua form web
+ * 2. Servlet lưu file xuống ổ đĩa (thư mục uploads)
+ * 3. Servlet thêm bản ghi vào cơ sở dữ liệu (status = PENDING)
+ * 4. Servlet mở TCP Socket đến Conversion Server (Module B)
+ * 5. Servlet gửi "taskId|filePath" đến Server
+ * 6. Servlet đóng Socket ngay lập tức (Fire and Forget)
+ * 7. Người dùng được chuyển hướng đến trang xem trạng thái xử lý
  * 
- * NETWORKING CONCEPT:
- * - This servlet acts as a TCP CLIENT
- * - It connects to ServerMain (which is the TCP SERVER)
- * - Communication is ONE-WAY (no response expected)
- * 
- * @author Your Name
- * @course Network Programming - Final Project
+ * - Servlet này đóng vai trò là TCP CLIENT
+ * - Nó kết nối đến ServerMain (là TCP SERVER)
+ * - Giao tiếp theo một chiều (không mong đợi phản hồi)
  */
+
 @WebServlet("/upload")
 @MultipartConfig(fileSizeThreshold = 1024 * 1024 * 2, // 2MB
         maxFileSize = 1024 * 1024 * 10, // 10MB
@@ -51,19 +45,16 @@ import java.util.List;
 )
 public class UploadServlet extends HttpServlet {
 
-    // Configuration
+    // Config
     private static final String UPLOAD_DIR = "uploads";
     private static final String SERVER_HOST = "localhost";
     private static final int SERVER_PORT = 9999;
 
-    /**
-     * Initialize servlet - Create uploads directory if not exists
-     */
+//    Create uploads directory if not exists
     @Override
     public void init() throws ServletException {
         super.init();
 
-        // Get absolute path to uploads directory
         String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;
         File uploadDir = new File(uploadPath);
 
@@ -77,9 +68,7 @@ public class UploadServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Handle POST request (File upload)
-     */
+//  upload
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -149,9 +138,6 @@ public class UploadServlet extends HttpServlet {
         }
     }
 
-    /**
-     * Extract filename from multipart request
-     */
     private String extractFileName(Part part) {
         String contentDisp = part.getHeader("content-disposition");
         String[] items = contentDisp.split(";");
@@ -163,13 +149,6 @@ public class UploadServlet extends HttpServlet {
         return "";
     }
 
-    /**
-     * Insert task record to database
-     * 
-     * @param fileName Original filename
-     * @param filePath Full path to saved file
-     * @return The auto-generated task ID, or -1 if failed
-     */
     private int insertTaskToDatabase(int batchId, int sequenceOrder, String displayName, String filePath) {
         String sql = "INSERT INTO tasks (batch_id, sequence_order, display_name, original_filename, file_path_input, status) "
                 + "VALUES (?, ?, ?, ?, ?, 'PENDING')";
@@ -186,7 +165,6 @@ public class UploadServlet extends HttpServlet {
             int rowsAffected = stmt.executeUpdate();
 
             if (rowsAffected > 0) {
-                // Get the auto-generated ID
                 ResultSet rs = stmt.getGeneratedKeys();
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -251,6 +229,7 @@ public class UploadServlet extends HttpServlet {
         return files;
     }
 
+    // không có ký tự lạ, tránh lỗi
     private String sanitizeFileName(String original) {
         String base = original == null ? "file.docx" : original;
         base = Paths.get(base).getFileName().toString();
@@ -275,15 +254,10 @@ public class UploadServlet extends HttpServlet {
     /**
      * Send conversion request to Server via TCP Socket
      * 
-     * NETWORKING EXPLANATION:
      * 1. Create a Socket connection to localhost:9999
      * 2. Send a single line: "taskId|filePath"
      * 3. Close socket immediately (Fire and Forget)
      * 4. Don't wait for response (Asynchronous)
-     * 
-     * @param taskId   The database task ID
-     * @param filePath Full path to the DOCX file
-     * @return true if sent successfully, false otherwise
      */
     private boolean sendRequestToServer(int taskId, String filePath) {
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
@@ -292,7 +266,6 @@ public class UploadServlet extends HttpServlet {
             // Format: "taskId|filePath"
             String message = taskId + "|" + filePath;
 
-            // Send to server
             writer.println(message);
 
             System.out.println("[UploadServlet] Sent to server: " + message);

@@ -19,9 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST endpoint trả về toàn bộ trạng thái của một batch upload.
- */
+// REST endpoint trả về toàn bộ trạng thái của một batch upload.
 @WebServlet("/api/batch-status")
 public class BatchStatusServlet extends HttpServlet {
 
